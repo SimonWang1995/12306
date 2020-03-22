@@ -1,7 +1,6 @@
 from tkinter import *
-from tkinter import ttk
 from tkinter import messagebox
-from test12306.webfunc import *
+from test12306.WebFun.queryTrains import *
 
 class MainPage(object):
     def __init__(self,master):
@@ -53,7 +52,7 @@ class MainPage(object):
         self.var=[]
         for i,value in enumerate(self.varlist):
             self.var.append(IntVar())
-            Checkbutton(self.root,text=value,variable=self.var[i],onvalue=1,offvalue=0,command=self.select_type).place(relx=0.10+(i+1)*0.07,rely=0.15,anchor=CENTER)
+            Checkbutton(self.root,text=value,variable=self.var[i],onvalue=1,offvalue=0).place(relx=0.10+(i+1)*0.07,rely=0.15,anchor=CENTER)
 
 
         #车次（抢票用）
@@ -64,25 +63,29 @@ class MainPage(object):
 
 
     def select_type(self):
+        self.Ttype.clear()
         for i in range(len(self.varlist)):
 #            print(self.var[i].get())
             if self.var[i].get()==1:
                 self.Ttype.add(self.varlist[i])
-            else:
-                self.Ttype.remove(self.varlist[i])
 
 
     def query_button(self):
        # print(self.Sdate,self.starting,self.target)
+        self.select_type()
         print(self.Ttype)
         status,result=Query(self.Sdate.get(),self.starting.get(),self.target.get(),self.Ttype).query()
         if status:
             self.show_query_txt(result)
         else:
-            messagebox.showerror(result)
+            messagebox.showerror(message=result)
 
     def show_query_txt(self,res):
         print(res)
+        self.__name = '车次： 车站： 时间： 历时： 商务/特等座： 一等座： 二等座： 高级软卧： 软卧： 动卧： 硬卧： 软座： 硬座： 无座：'.split()
+        text = "%-5s  %-11s  %-12s  %-5s  %-2s %-2s %-2s %-2s %-2s %-2s %-2s %-2s %-2s %-2s" % tuple(self.__name)
+        self.text_show.insert(END, text)
+        self.text_show.insert(END, "\n")
         for train in res:
             print(tuple(train))
             text = "%-5s  %-11s  %-12s  %-5s  %-2s %-2s %-2s %-2s %-2s %-2s %-2s %-2s %-2s %-2s"% tuple(train)
