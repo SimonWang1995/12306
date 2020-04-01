@@ -37,7 +37,8 @@ class LoginPage():
         self.logininit.get_vcode() #获取验证码
         Canvas_root = Canvas(self.page,width=300,height=200)
         photo=self.get_image()
-        Canvas_root.create_image(150,100,image=photo)
+        # Canvas_root.create_image(150,100,image=photo)
+        Canvas_root.create_image(150,100, image=photo)
         Canvas_root.place(x=1,y=70,width=300,height=200)
         self.select_list=[]
         for i in range(8):
@@ -75,11 +76,14 @@ class LoginPage():
             showwarning(message="密码不能为空")
         elif len(code_num) == 0:
             showwarning(message="请选择验证码")
-        try:
-            status,res = self.logininit.login(self.username.get(),self.passwd.get(),code_num)
-        except RuntimeError as e:
-            self.initvcode()
-            showerror(message=e)
+        if self.username.get() and self.passwd and len(code_num) != 0:
+            try:
+                status,session = self.logininit.login(self.username.get(),self.passwd.get(),code_num)
+                self.page.destroy()
+                MainPage(self.root,session)
+            except RuntimeError as e:
+                self.initvcode()
+                showerror(message=e)
 
 
 
@@ -88,8 +92,7 @@ class LoginPage():
             # except:
         #         pass
         #
-        # self.page.destroy()
-        # MainPage(self.root)
+
 
 
 

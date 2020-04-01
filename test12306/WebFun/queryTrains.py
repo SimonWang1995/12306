@@ -1,4 +1,5 @@
 import requests
+from threading import Thread
 from test12306.Utils.Station_Parse import  parse_station
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 # 忽视该警告
@@ -6,8 +7,7 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 
 class Query():
-    def __init__(self,Sdate,from_sta,to_sta,train_type=None):
-        self.init_url = ""
+    def __init__(self,session):
         self.url_template = (
             'https://kyfw.12306.cn/otn/leftTicket/query?leftTicketDTO.'
             'train_date={0}&'
@@ -15,13 +15,7 @@ class Query():
             'leftTicketDTO.to_station={2}&'
             'purpose_codes=ADULT'
         )
-        self.Train_date = Sdate
-        self.from_sta = parse_station().parse(from_sta)
-        self.to_sta = parse_station().parse(to_sta)
-        self.train_type = train_type
-        # self.train_type = "GCDT"
-        self.session = requests.Session()
-
+        self.session = session
 
 
     def get_url(self):
@@ -29,7 +23,12 @@ class Query():
         #print(url)
         return url
 
-    def query(self):
+    def query(self,Sdate,from_sta,to_sta,train_type=None):
+        self.Train_date = Sdate
+        self.from_sta = parse_station().parse(from_sta)
+        self.to_sta = parse_station().parse(to_sta)
+        self.train_type = train_type
+        # self.train_type = "GCDT"
         self.init_url = "https://www.12306.cn/index/"
         self.query_url = "https://kyfw.12306.cn/otn/leftTicket/init?linktypeid=dc"
         self.headers = {
@@ -46,6 +45,7 @@ class Query():
             return True,self.format_trains
         except:
             print("query failed")
+            # raise ("query failed")
             return False,"出了点小问题，请重新点击按钮"
 
     def select_trains(self):
@@ -55,14 +55,27 @@ class Query():
             # format_train=[]
             train_list = train.split('|')
             #print(train_list)
+            thread_list=[]
             if self.train_type:
-                if train_list[3][0] in self.train_type:
-                    self.train_format(train_list)
+                if str(train_list[3][0]) in self.train_type:
+                    print(train_list[3][0], self.train_type)
+                    # self.train_format(train_list)
+                    t = Thread(target=self.train_format,args=(train_list,))
+                    # t.setDaemon(True)
+                    thread_list.append(t)
+                    t.start()
             else:
-                self.train_format(train_list)
+                # self.train_format(train_list)
+                t = Thread(target=self.train_format, args=(train_list,))
+                # t.setDaemon(True)
+                thread_list.append(t)
+                t.start()
+            for t in thread_list:
+                t.join()
 
 
     def train_format(self,train_list):
+        print(train_list)
         format_train=[]
         format_train.append(train_list[3])
         format_train.append(parse_station().disparse(train_list[6])+"->"+parse_station().disparse(train_list[7]))
@@ -78,6 +91,7 @@ class Query():
         format_train.append(train_list[24] or "--")
         format_train.append(train_list[29] or "--")
         format_train.append(train_list[26] or "--")
+        print(format_train)
         self.format_trains.append(format_train)
 
 

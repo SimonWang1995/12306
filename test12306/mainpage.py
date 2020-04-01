@@ -1,12 +1,16 @@
 from tkinter import *
 from tkinter import messagebox
+from tkinter import ttk
 from test12306.WebFun.queryTrains import *
+import requests
 
 class MainPage(object):
-    def __init__(self,master):
+    def __init__(self,master,session=requests.session()):
         self.root = master
-        self.root.geometry("%dx%d" % (650, 500))
+        self.root.geometry("%dx%d" % (800, 600))
+        self.session = session
         #查询用
+        self.headers = "车次 车站 时间 历时 商务/特等座 一等座 二等座 高级软卧 软卧 动卧 硬卧 软座 硬座 无座".split()
         self.starting = StringVar()
         self.target = StringVar()
         self.Sdate = StringVar()
@@ -14,30 +18,25 @@ class MainPage(object):
         #抢票用
         self.passenger = StringVar()
         self.Tnum = StringVar()
-
         self.initpage()
 
-    def initpage(self):
-        """self.Upframe = Frame(self.root)
-        self.Downframe = Frame(self.root)
-        Label(self.Upframe).grid(row=0)
-        Label(self.Upframe,text="出发地:").grid(row=1,column=0)
-        Entry(self.Upframe,textvariable=self.starting,width=10).grid(row=1,column=1,padx=20,)
-        Label(self.Upframe,text="目的地:").grid(row=1,column=2,stick=E)
-        Entry(self.Upframe,textvariable=self.target,width=10).grid(padx=20,row=1,column=3,stick=W)
-        Label(self.Upframe,text="出发日期:").grid(row=1,column=4,stick=E)
-        Entry(self.Upframe,textvariable=self.Sdate,width=10).grid(padx=20,row=1,column=5,stick=W)
-        self.Upframe.pack(side=TOP)
-        self.Downframe.pack(side=BOTTOM)"""
 
+    def initpage(self):
         #查询按键
         self.query = Button(self.root,text="查询",width=10,height=2,bg='skyblue',command=self.query_button).place(relx=0.70,rely=0.12,anchor=CENTER)
         #抢票按键
         self.buy = Button(self.root,text="抢票",width=10,height=2,bg='skyblue',command=self.buy_button).place(rely=0.12,relx=0.90,anchor=CENTER)
         #显示查询结果框
-        #self.text_show=Text(self.root,bd=4,relwidth=90,height=28,font=('楷体',10))
-        self.text_show = Text(self.root, bd=4, width=90, height=28, font=('楷体', 10))
-        self.text_show.place(relx=0.50,rely=0.60,relwidth=0.9,relheight=0.7,anchor=CENTER)
+        # self.text_show = Text(self.root, bd=4, width=90, height=28, font=('楷体', 10))
+        # self.text_show.place(relx=0.50,rely=0.60,relwidth=0.9,relheight=0.7,anchor=CENTER)
+        self.page = Frame(self.root)
+        self.scrollbar = Scrollbar(self.page)
+        self.scrollbar.pack(side=RIGHT,fill=Y)
+        self.text_show = ttk.Treeview(self.page,show="headings",columns=self.headers,yscrollcommand=self.scrollbar.set)
+        self.init_show()
+        self.scrollbar.config(command=self.text_show.yview)
+        self.text_show.pack(expand=YES,fill=BOTH)
+        self.page.place(relx=0.50, rely=0.60, relwidth=0.9, relheight=0.7, anchor=CENTER)
         #输入乘客信息
         Label(self.root,text="出发地:",font=('楷体',12)).place(relx=0.10,rely=0.05,anchor=CENTER)
         Entry(self.root,textvariable=self.starting,width=10).place(relx=0.10,rely=0.10,anchor=CENTER)
@@ -48,7 +47,7 @@ class MainPage(object):
         #车票类型（查询用）
         Label(self.root,text="车票类型:",font=('楷体',12)).place(relx=0.10,rely=0.15,anchor=CENTER)
         #self.varlist=["GC-高铁/城际","D-动车","Z-直达","T-特快","K-快速","其他"]
-        self.varlist = ["G","C", "D ", "Z ", "T ", "K "]
+        self.varlist = ["G","C", "D", "Z", "T", "K"]
         self.var=[]
         for i,value in enumerate(self.varlist):
             self.var.append(IntVar())
@@ -69,12 +68,23 @@ class MainPage(object):
             if self.var[i].get()==1:
                 self.Ttype.add(self.varlist[i])
 
+    def init_show(self):
+        wd_list = [50,100,100,50,30,30,30,30,30,30,30,30,30,30]
+        for name,v in zip(self.headers,wd_list):
+            self.text_show.column(name,width=v,anchor='center')
+            self.text_show.heading(name,text=name)
+
+    def clear_txt(self):
+        items = self.text_show.get_children()
+        for i in items:
+            self.text_show.delete(i)
 
     def query_button(self):
        # print(self.Sdate,self.starting,self.target)
+        self.clear_txt()
         self.select_type()
         print(self.Ttype)
-        status,result=Query(self.Sdate.get(),self.starting.get(),self.target.get(),self.Ttype).query()
+        status,result=Query(self.session).query(self.Sdate.get(),self.starting.get(),self.target.get(),self.Ttype)
         if status:
             self.show_query_txt(result)
         else:
@@ -82,16 +92,12 @@ class MainPage(object):
 
     def show_query_txt(self,res):
         print(res)
-        self.__name = '车次： 车站： 时间： 历时： 商务/特等座： 一等座： 二等座： 高级软卧： 软卧： 动卧： 硬卧： 软座： 硬座： 无座：'.split()
-        text = "%-5s  %-11s  %-12s  %-5s  %-2s %-2s %-2s %-2s %-2s %-2s %-2s %-2s %-2s %-2s" % tuple(self.__name)
-        self.text_show.insert(END, text)
-        self.text_show.insert(END, "\n")
-        for train in res:
+        for i,train in enumerate(res):
             print(tuple(train))
-            text = "%-5s  %-11s  %-12s  %-5s  %-2s %-2s %-2s %-2s %-2s %-2s %-2s %-2s %-2s %-2s"% tuple(train)
+            text = tuple(train)
             print(text)
-            self.text_show.insert(END,text)
-            self.text_show.insert(END,"\n")
+            self.text_show.insert('',i,value=text)
+
 
 
     def buy_button(self):

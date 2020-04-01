@@ -1,19 +1,25 @@
 from test12306.Utils.misc import *
 import requests
 import time,os
+from json import loads
 
 class login12306():
-    def __init__(self,session=requests.Session(),**kwargs):
-        self.__name  = 'login12306'
+    def __init__(self,**kwargs):
+        # self.__name  = 'login12306'
         self.cur_path = os.getcwd()
-        self.session = session
+        self.session = requests.Session()
+
 
     '''登录函数'''
     def get_vcode(self):
         self.__initializePC()
         self.__downloadVcode()
 
-    def login(self,username,password,vcode_num,crackvcFunc=None):
+    def login(self,username,password,vcode_num=list(),crackvcFunc=None):
+        if len(vcode_num) == 0 and crackvcFunc is None:
+            showImage(os.path.join(self.cur_path, 'vcode.jpg'))
+            num = input("Enter vcode number(option 1-8,such as 1,2): ")
+            vcode_num = [ int(i)-1 for i in num.split(',') ]
         res = self.__verifyVcode(vcode_num,crackvcFunc)
         if not res:
             raise RuntimeError('verification code error...')
@@ -22,7 +28,7 @@ class login12306():
             'password': password,
             'appid': 'otn'
         }
-        res = self.session.post(self.login_url, headers=self.headers, data=data)
+        res = self.session.post(self.login_url, headers=self.headers, data=data,verify=False)
         if res.status_code == 200:
             print('[INFO]: Account -> %s, login successfully...' % username)
             infos_return = {'username': username}
@@ -33,8 +39,9 @@ class login12306():
 
     '''下载验证码'''
     def __downloadVcode(self):
-        res = self.session.get(self.vcode_url, headers=self.headers)
-        saveImage(res.content, os.path.join(self.cur_path, 'vcode.jpg'))
+        res = self.session.get(self.vcode_url, headers=self.headers,verify=False)
+        print(self.cur_path)
+        saveImage(res.content, img_path=os.path.join(self.cur_path, 'vcode.jpg'))
         return True
 
     '''验证码验证'''
@@ -55,7 +62,7 @@ class login12306():
             'login_site': 'E',
             'rand': 'sjrand'
         }
-        res = self.session.post(url=self.verify_url, headers=self.headers, data=data)
+        res = self.session.post(url=self.verify_url, headers=self.headers, data=data,verify=False)
         removeImage(img_path)
         if res.json()['result_code'] == '4':
             return True
@@ -71,6 +78,8 @@ class login12306():
         self.vcode_url = 'https://kyfw.12306.cn/passport/captcha/captcha-image?login_site=E&module=login&rand=sjrand&0.5579044251920726'
         self.verify_url = 'https://kyfw.12306.cn/passport/captcha/captcha-check'
         self.login_url = 'https://kyfw.12306.cn/passport/web/login'
+        self.tk_url = 'https://kyfw.12306.cn/passport/web/auth/uamtk'
+        self.cl_url = 'https://kyfw.12306.cn/otn/uamauthclient'
 
     '''初始化移动端'''
 
@@ -78,5 +87,7 @@ class login12306():
         pass
 
 
-if __name__ == "___main__":
-    login12306()
+if __name__ == '__main__':
+    login = login12306()
+    login.get_vcode()
+    login.login("usernaem","password")
