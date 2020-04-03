@@ -1,17 +1,21 @@
 from tkinter import *
 from tkinter.ttk import *
 from tkinter.messagebox import *
-from test12306.WebFun.Login12306 import login12306
+# from test12306.WebFun.Login12306_bak import login12306
+from test12306.WebFun.login12306 import login12306
 from test12306.mainpage import MainPage
 from PIL import Image,ImageTk
-import time
+from selenium import webdriver
+import time,os
 
 class LoginPage():
-    def __init__(self,master,login):
+    def __init__(self,master,driver):
         self.root = master
+        self.driver = driver
+        self.weblogin = login12306(self.driver)
         self.root.geometry('%dx%d' % (300, 300))
         self.root.resizable(False,False)
-        self.logininit = login
+        self.path = os.getcwd()
         self.username = StringVar()
         self.passwd = StringVar()
         self.initpage()
@@ -34,7 +38,7 @@ class LoginPage():
 
     def initvcode(self):
         global photo
-        self.logininit.get_vcode() #获取验证码
+        self.weblogin.get_Vcode("vcode.png") #获取验证码
         Canvas_root = Canvas(self.page,width=300,height=200)
         photo=self.get_image()
         # Canvas_root.create_image(150,100,image=photo)
@@ -59,7 +63,7 @@ class LoginPage():
 
     def get_image(self):
         time.sleep(0.1)
-        img = Image.open("vcode.jpg")
+        img = Image.open("vcode.png")
         #img.show()
         return ImageTk.PhotoImage(img)
 
@@ -78,20 +82,14 @@ class LoginPage():
             showwarning(message="请选择验证码")
         if self.username.get() and self.passwd and len(code_num) != 0:
             try:
-                status,session = self.logininit.login(self.username.get(),self.passwd.get(),code_num)
+                self.weblogin.login(self.username.get(),self.passwd.get(),code_num)
                 self.page.destroy()
-                MainPage(self.root,session)
-            except RuntimeError as e:
+                MainPage(self.root,self.driver)
+            except Exception as e:
                 self.initvcode()
                 showerror(message=e)
 
 
-
-            # try:
-            #     self.logininit.login()
-            # except:
-        #         pass
-        #
 
 
 
@@ -106,6 +104,9 @@ class LoginPage():
 if __name__ == "__main__":
     tk = Tk()
     tk.title("12306Buy")
-    login12306 = login12306()
-    LoginPage(tk,login12306)
-    tk.mainloop()
+    driver = webdriver.Chrome()
+    try:
+        LoginPage(tk,driver)
+        tk.mainloop()
+    finally:
+        driver.close()

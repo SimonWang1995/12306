@@ -1,93 +1,115 @@
-from test12306.Utils.misc import *
-import requests
-import time,os
-from json import loads
+from selenium import webdriver
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
+import re,time,base64,os,sys
+import subprocess
+
 
 class login12306():
-    def __init__(self,**kwargs):
-        # self.__name  = 'login12306'
-        self.cur_path = os.getcwd()
-        self.session = requests.Session()
+    def __init__(self,driver):
+        self.driver = driver
+        self.__initurl = "https://kyfw.12306.cn/otn/resources/login.html"
+        self.initlogin()
+
+    def initlogin(self):
+        self.driver.get(self.__initurl)
+        try:
+            WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID,"J-qrImg")))
+        except Exception as e:
+            print("网络有问题，请稍后再试")
+            raise RuntimeError("网络有问题，请稍后再试")
+
+    def login(self,user,passwd,vcode_num):
+        self.user_ele = self.driver.find_element(By.ID,"J-userName")
+        self.user_ele.clear()
+        self.user_ele.send_keys(user)
+        self.passwd_ele = self.driver.find_element(By.ID,"J-password")
+        self.passwd_ele.clear()
+        self.passwd_ele.send_keys(passwd)
+        self.moveaction(vcode_num)
+        self.submit()
 
 
-    '''登录函数'''
-    def get_vcode(self):
-        self.__initializePC()
-        self.__downloadVcode()
-
-    def login(self,username,password,vcode_num=list(),crackvcFunc=None):
-        if len(vcode_num) == 0 and crackvcFunc is None:
-            showImage(os.path.join(self.cur_path, 'vcode.jpg'))
-            num = input("Enter vcode number(option 1-8,such as 1,2): ")
-            vcode_num = [ int(i)-1 for i in num.split(',') ]
-        res = self.__verifyVcode(vcode_num,crackvcFunc)
-        if not res:
-            raise RuntimeError('verification code error...')
-        data = {
-            'username': username,
-            'password': password,
-            'appid': 'otn'
-        }
-        res = self.session.post(self.login_url, headers=self.headers, data=data,verify=False)
-        if res.status_code == 200:
-            print('[INFO]: Account -> %s, login successfully...' % username)
-            infos_return = {'username': username}
-            return infos_return, self.session
-        else:
-            raise RuntimeError('Account -> %s, fail to login, username or password error...' % username)
-
-
-    '''下载验证码'''
-    def __downloadVcode(self):
-        res = self.session.get(self.vcode_url, headers=self.headers,verify=False)
-        print(self.cur_path)
-        saveImage(res.content, img_path=os.path.join(self.cur_path, 'vcode.jpg'))
-        return True
-
-    '''验证码验证'''
-    def __verifyVcode(self,vcode_num,crackvcFunc):
-        img_path = os.path.join(self.cur_path, 'vcode.jpg')
-        if crackvcFunc is None:
-            #showImage(img_path)
-            verify_list = []
-            for each in vcode_num:
-                try:
-                    verify_list.append(self.positions[each])
-                except:
-                    raise RuntimeError('verification code error...')
-        else:
-            verify_list = crackvcFunc(img_path)
-        data = {
-            'answer': ','.join(verify_list),
-            'login_site': 'E',
-            'rand': 'sjrand'
-        }
-        res = self.session.post(url=self.verify_url, headers=self.headers, data=data,verify=False)
-        removeImage(img_path)
-        if res.json()['result_code'] == '4':
-            return True
-        else:
-            return False
-
-    '''初始化PC端'''
-    def __initializePC(self):
-        self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36'
-        }
-        self.positions = ['36,46', '109,44', '181,47', '254,44', '33,112', '105,116', '186,116', '253,115']
-        self.vcode_url = 'https://kyfw.12306.cn/passport/captcha/captcha-image?login_site=E&module=login&rand=sjrand&0.5579044251920726'
-        self.verify_url = 'https://kyfw.12306.cn/passport/captcha/captcha-check'
-        self.login_url = 'https://kyfw.12306.cn/passport/web/login'
-        self.tk_url = 'https://kyfw.12306.cn/passport/web/auth/uamtk'
-        self.cl_url = 'https://kyfw.12306.cn/otn/uamauthclient'
-
-    '''初始化移动端'''
-
-    def __initializeMobile(self):
+    def verifycode(self,vcodenum):
+        """自动验证Vcode"""
         pass
 
+    def moveaction(self,result):
+        self.coordinate = [[-105, -20], [-35, -20], [40, -20], [110, -20], [-105, 50], [-35, 50], [40, 50], [110, 50]]
+        try:
+            Action = ActionChains(self.driver)
+            for i in result:
+                Action.move_to_element(self.img_element).move_by_offset(self.coordinate[i][0],
+                                                                        self.coordinate[i][1]).click()
+            Action.perform()
+        except Exception as e:
+            print(e)
+            raise RuntimeError ("Click Vcode failed")
+
+    def showImage(self,img_path):
+        if sys.platform.find('darwin') >= 0:
+            subprocess.call(['open', img_path])
+        elif sys.platform.find('linux') >= 0:
+            subprocess.call(['xdg-open', img_path])
+        else:
+            os.startfile(img_path)
+        return True
+
+    def get_QRcode(self,filename="vcode.png"):
+        try:
+            WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH,"""//*[@id="J-qrImg"]""")))
+        except Exception as e:
+            print("网络有问题，请稍后再试")
+            raise RuntimeError ("网络有问题，请稍后再试")
+        QRbase64=self.driver.find_element(By.XPATH, """//*[@id="J-qrImg"]""").get_attribute("src").split(',')[1]
+        QRcode = base64.b64decode(QRbase64)
+        with open(filename,'wb') as file:
+            file.write(QRcode)
+
+    def submit(self):
+        self.driver.find_element(By.ID,"J-login").click()
+        try:
+            WebDriverWait(self.driver,6).until(EC.presence_of_element_located((By.CLASS_NAME,"logout")))
+        except Exception as e:
+            print(e)
+            if self.driver.find_element_by_xpath("""//*[@id="J-login-error"]/span""").text != '':
+                raise RuntimeError(self.driver.find_element(By.XPATH,"""//*[@id="J-login-error"]/span""").text)
+            raise RuntimeError("登录失败，请重新登录")
+
+
+
+    def get_Vcode(self,filename='vcode.png'):
+        self.driver.find_element(By.CLASS_NAME,"login-hd-account").click()
+        try:
+
+            WebDriverWait(self.driver, 100).until(
+                EC.presence_of_element_located((By.ID, "J-loginImg"))
+            )
+
+        except Exception as e:
+            print(u"网络开小差,请稍后尝试")
+        time.sleep(2)
+        img_element = self.driver.find_element(By.ID,"J-loginImg")
+        base64_str = img_element.get_attribute("src").split(",")[-1]
+        imgdata = base64.b64decode(base64_str)
+        with open(filename, 'wb') as file:
+            file.write(imgdata)
+        self.img_element = img_element
 
 if __name__ == '__main__':
-    login = login12306()
-    login.get_vcode()
-    login.login("usernaem","password")
+    imgpath=os.path.join(os.getcwd(),'vcode.png')
+    driver = webdriver.Chrome()
+    try:
+        logintest = login12306(driver)
+        logintest.get_Vcode(imgpath)
+        logintest.showImage(imgpath)
+        code_num = input("Enter Vcode number(Such as 1,2):")
+        code_num=[int(x)-1 for x in code_num.split(',')]
+        # logintest.verifycode(code_num)
+        # logintest.moveaction(code_num)
+        logintest.login("username","password",code_num)
+        logintest.submit()
+    finally:
+        driver.close()

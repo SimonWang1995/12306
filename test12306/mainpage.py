@@ -5,9 +5,10 @@ from test12306.WebFun.queryTrains import *
 import requests
 
 class MainPage(object):
-    def __init__(self,master,session=requests.session()):
+    def __init__(self,master,driver=None,session=requests.session()):
         self.root = master
         self.root.geometry("%dx%d" % (800, 600))
+        self.driver = driver
         self.session = session
         #查询用
         self.headers = "车次 车站 时间 历时 商务/特等座 一等座 二等座 高级软卧 软卧 动卧 硬卧 软座 硬座 无座".split()
@@ -36,7 +37,8 @@ class MainPage(object):
         self.init_show()
         self.scrollbar.config(command=self.text_show.yview)
         self.text_show.pack(expand=YES,fill=BOTH)
-        self.page.place(relx=0.50, rely=0.60, relwidth=0.9, relheight=0.7, anchor=CENTER)
+        # self.page.place(relx=0.50, rely=0.60, relwidth=0.9, relheight=0.7, anchor=CENTER)
+        self.page.place(relx=0, rely=0.25, relwidth=1, relheight=0.75)
         #输入乘客信息
         Label(self.root,text="出发地:",font=('楷体',12)).place(relx=0.10,rely=0.05,anchor=CENTER)
         Entry(self.root,textvariable=self.starting,width=10).place(relx=0.10,rely=0.10,anchor=CENTER)
