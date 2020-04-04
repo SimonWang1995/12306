@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter import messagebox
 from tkinter import ttk
 from test12306.WebFun.queryTrains import *
+from test12306.WebFun.login12306 import *
 import requests
 
 class MainPage(object):
@@ -58,7 +59,10 @@ class MainPage(object):
 
         #车次（抢票用）
         Label(self.root,text="乘客(抢票用):",font=('楷体',12)).place(relx=0.10,rely=0.20,anchor=CENTER)
-        Entry(self.root,textvariable=self.passenger,width=10).place(relx=0.25,rely=0.20,anchor=CENTER)
+        # Entry(self.root,textvariable=self.passenger,width=10).place(relx=0.25,rely=0.20,anchor=CENTER)
+        passengers=login12306(self.driver).get_passenger()
+        self.passenger = StringVar()
+        ttk.Combobox(self.root,textvariable=self.passenger,values=passengers,state="readonly").place(relx=0.25,rely=0.20,relwidth=0.1,anchor=CENTER)
         Label(self.root,text="车次(抢票用):",font=('楷体',12)).place(relx=0.40,rely=0.20,anchor=CENTER)
         Entry(self.root,textvariable=self.Tnum,width=10).place(relx=0.55,rely=0.20,anchor=CENTER)
 

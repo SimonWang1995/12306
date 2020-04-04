@@ -11,7 +11,7 @@ class login12306():
     def __init__(self,driver):
         self.driver = driver
         self.__initurl = "https://kyfw.12306.cn/otn/resources/login.html"
-        self.initlogin()
+        # self.initlogin()
 
     def initlogin(self):
         self.driver.get(self.__initurl)
@@ -72,12 +72,15 @@ class login12306():
         self.driver.find_element(By.ID,"J-login").click()
         try:
             WebDriverWait(self.driver,6).until(EC.presence_of_element_located((By.CLASS_NAME,"logout")))
+            time.sleep(2)
+            if self.driver.find_element(By.CLASS_NAME,"modal-close"):
+                self.driver.find_element(By.CLASS_NAME,"modal-close").click()
         except Exception as e:
             print(e)
-            if self.driver.find_element_by_xpath("""//*[@id="J-login-error"]/span""").text != '':
-                raise RuntimeError(self.driver.find_element(By.XPATH,"""//*[@id="J-login-error"]/span""").text)
+            if not self.driver.find_element_by_xpath("""//*[@id="J-login-error"]/span"""):
+                text = self.driver.find_element_by_xpath("""//*[@id="J-login-error"]/span""").text
+                raise RuntimeError(text)
             raise RuntimeError("登录失败，请重新登录")
-
 
 
     def get_Vcode(self,filename='vcode.png'):
@@ -97,6 +100,32 @@ class login12306():
         with open(filename, 'wb') as file:
             file.write(imgdata)
         self.img_element = img_element
+
+    def get_passenger(self):
+        passenger_list = []
+        __url = "https://kyfw.12306.cn/otn/view/passengers.html"
+        try:
+            self.driver.get(__url)
+            WebDriverWait(self.driver,10).until(EC.presence_of_element_located((By.CLASS_NAME,"name-yichu")))
+        except Exception as e:
+            print(e)
+            raise RuntimeError("Get passenger Failed")
+        self.users_ele = self.driver.find_elements(By.CLASS_NAME,"name-yichu")
+        for user in self.users_ele:
+            passenger=user.text
+            passenger_list.append(passenger)
+        self.passenger_list=passenger_list
+        return self.passenger_list
+
+
+
+class buy12306():
+    def __init__(self,driver):
+        self.driver =driver
+
+    def get(self):
+        pass
+
 
 if __name__ == '__main__':
     imgpath=os.path.join(os.getcwd(),'vcode.png')

@@ -13,6 +13,7 @@ class LoginPage():
         self.root = master
         self.driver = driver
         self.weblogin = login12306(self.driver)
+        self.weblogin.initlogin()
         self.root.geometry('%dx%d' % (300, 300))
         self.root.resizable(False,False)
         self.path = os.getcwd()
@@ -96,15 +97,11 @@ class LoginPage():
 
 
 
-
-
-
-
-
 if __name__ == "__main__":
     tk = Tk()
     tk.title("12306Buy")
     driver = webdriver.Chrome()
+    driver.implicitly_wait(8)
     try:
         LoginPage(tk,driver)
         tk.mainloop()
